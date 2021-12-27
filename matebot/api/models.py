@@ -2,7 +2,7 @@ from django.db import models
 from django.db.models import CharField, IntegerField, BooleanField, ForeignKey, DateTimeField, ManyToManyField
 
 
-class Application(models.Model):
+class ApplicationModel(models.Model):
     """This class represents an application.
 
     The token is used to authenticate the application via RCP.
@@ -16,7 +16,7 @@ class UserAliasModel(models.Model):
     Aliases are in use to overcome the different usernames and ids of applications.
     """
     app_user_id = CharField(max_length=255, unique=True)
-    application = ForeignKey(Application, on_delete=models.CASCADE)
+    application = ForeignKey(ApplicationModel, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.app_user_id
