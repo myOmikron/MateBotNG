@@ -1,2 +1,2 @@
 Django~=4.0
-rc-protocol~=0.0.5
+rc-protocol~=0.1.0
