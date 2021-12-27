@@ -29,17 +29,31 @@ class UserModel(models.Model):
     """
     name = CharField(max_length=255, null=True)
     balance = IntegerField(default=0)
-    permission = BooleanField(default=False)
+    complete_access = BooleanField(default=False)
     active = BooleanField(default=True)
     external = BooleanField(default=False)
     voucher = ForeignKey("self", null=True, blank=True, on_delete=models.CASCADE)
-    user_aliases = ManyToManyField(UserAliasModel)
+    user_aliases = ManyToManyField(UserAliasModel, blank=True)
 
     created = DateTimeField(auto_now_add=True)
     modified = DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name
+
+    def to_dict(self):
+        return {
+            "identifier": self.id,
+            "name": self.name,
+            "balance": self.balance,
+            "complete_access": self.complete_access,
+            "active": self.active,
+            "external": self.external,
+            "voucher_id": self.voucher_id,
+            "user_alias_ids": [x for x in self.user_aliases.values("id")],
+            "created": self.created.timestamp(),
+            "modified": self.modified.timestamp()
+        }
 
 
 class ApplicationCallbackModel(models.Model):
