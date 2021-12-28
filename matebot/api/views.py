@@ -22,7 +22,12 @@ class AuthView(View):
         checksum = request.headers["Authorization"].split(" ")[1]
         if request.META["REQUEST_METHOD"] == "GET":
             if not any([
-                rc_protocol.validate_checksum(request.GET, checksum, x.token, salt=request.path)
+                rc_protocol.validate_checksum(
+                    dict(((x, request.GET[x]) for x in request.GET)),
+                    checksum,
+                    x.token,
+                    salt=request.path
+                )
                 for x in models.ApplicationModel.objects.all()
             ]):
                 return JsonResponse({"success": False, "info": "Authorization failed"}, status=403)
