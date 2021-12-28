@@ -13,9 +13,6 @@ from api import models
 @method_decorator(csrf_exempt, name='dispatch')
 class AuthView(View):
     """This is the base class to ensure requests are only allowed when authenticated"""
-    def __init__(self, path):
-        super().__init__()
-        self.path = path
 
     def _check_auth(self, request):
         if "Authorization" not in request.headers:
