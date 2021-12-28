@@ -68,3 +68,15 @@ class GetConsumableView(AuthView):
         data = [x.to_dict() for x in models.ConsumableModel.objects.all()]
         return JsonResponse({"success": True, "data": data})
 
+
+class GetUserView(AuthView):
+    def secure_get(self, request, *args, **kwargs):
+        if "filter" in request.GET:
+            try:
+                data = models.UserModel.objects.get(id=request.GET["filter"]).to_dict()
+            except models.UserModel.DoesNotExist:
+                return JsonResponse({"success": True, "data": []})
+        else:
+            data = [x.to_dict() for x in models.UserModel.objects.all()]
+        return JsonResponse({"success": True, "data": data})
+
