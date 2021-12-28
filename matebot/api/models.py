@@ -92,6 +92,15 @@ class ConsumableModel(models.Model):
     symbol = CharField(max_length=15)
     messages = ManyToManyField(ConsumableMessageModel, blank=True)
 
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "description": self.description,
+            "price": self.price,
+            "symbol": self.symbol,
+            "messages": [x.message for x in self.messages.all()]
+        }
+
 
 class VoteModel(models.Model):
     """Model that is used to represent a single Vote.
