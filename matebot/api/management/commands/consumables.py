@@ -26,6 +26,7 @@ class Command(BaseCommand):
                 for message in consumable["messages"]:
                     messages.append(models.ConsumableMessageModel.objects.create(message=message).id)
                 c = models.ConsumableModel.objects.create(
+                    name=name,
                     description=consumable["description"],
                     price=consumable["price"],
                     symbol=consumable["symbol"]
