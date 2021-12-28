@@ -10,18 +10,6 @@ class ApplicationModel(models.Model):
     token = CharField(max_length=255)
 
 
-class UserAliasModel(models.Model):
-    """This Model represents an alias.
-
-    Aliases are in use to overcome the different usernames and ids of applications.
-    """
-    app_user_id = CharField(max_length=255, unique=True)
-    application = ForeignKey(ApplicationModel, on_delete=models.CASCADE)
-
-    def __str__(self):
-        return self.app_user_id
-
-
 class UserModel(models.Model):
     """This represents the basic user.
 
@@ -29,11 +17,9 @@ class UserModel(models.Model):
     """
     name = CharField(max_length=255, null=True)
     balance = IntegerField(default=0)
-    complete_access = BooleanField(default=False)
     active = BooleanField(default=True)
-    external = BooleanField(default=False)
+    internal = BooleanField(default=False)
     voucher = ForeignKey("self", null=True, blank=True, on_delete=models.CASCADE)
-    user_aliases = ManyToManyField(UserAliasModel, blank=True)
 
     created = DateTimeField(auto_now_add=True)
     modified = DateTimeField(auto_now=True)
@@ -46,14 +32,27 @@ class UserModel(models.Model):
             "identifier": self.id,
             "name": self.name,
             "balance": self.balance,
-            "complete_access": self.complete_access,
             "active": self.active,
-            "external": self.external,
+            "internal": self.internal,
             "voucher_id": self.voucher_id,
-            "user_alias_ids": [x for x in self.user_aliases.values("id")],
+            "vouched_for": [x.id for x in self.usermodel_set.all()],
+            "user_alias_ids": dict((x.application_id, x.app_user_id) for x in self.useraliasmodel_set.all()),
             "created": self.created.timestamp(),
             "modified": self.modified.timestamp()
         }
+
+
+class UserAliasModel(models.Model):
+    """This Model represents an alias.
+
+    Aliases are in use to overcome the different usernames and ids of applications.
+    """
+    user_alias = CharField(max_length=255)
+    application = ForeignKey(ApplicationModel, on_delete=models.CASCADE)
+    user = ForeignKey(UserModel, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.user_alias
 
 
 class ApplicationCallbackModel(models.Model):
@@ -67,15 +66,11 @@ class ApplicationCallbackModel(models.Model):
 
 
 class TransactionModel(models.Model):
+    """This model represents a transaction between two users"""
     sender = ForeignKey(UserModel, on_delete=models.DO_NOTHING, related_name="transaction_sender")
     receiver = ForeignKey(UserModel, on_delete=models.DO_NOTHING, related_name="transaction_receiver")
     amount = IntegerField()
     reason = CharField(max_length=255, default="", blank=True)
-    created = DateTimeField(auto_now_add=True)
-
-
-class MultiTransactionModel(models.Model):
-    transactions = ManyToManyField(TransactionModel)
     created = DateTimeField(auto_now_add=True)
 
 
@@ -103,34 +98,31 @@ class ConsumableModel(models.Model):
 
 
 class VoteModel(models.Model):
-    """Model that is used to represent a single Vote.
-
-    -1: Disapproved
-    0 : Abstained from voting
-    1 : Approved
-    """
-    vote = IntegerField(default=0)
+    """Model that is used to represent a single Vote."""
+    positive = BooleanField()
     user = ForeignKey(UserModel, on_delete=models.DO_NOTHING)
 
     modified = DateTimeField(auto_now=True)
 
 
-class PollModel(models.Model):
-    """This represents a Poll."""
-    question = CharField(max_length=255)
-    active = BooleanField(default=True)
-    votes = ManyToManyField(VoteModel, blank=True)
-    modified = DateTimeField(auto_now=True)
-
-
-class Refund(models.Model):
+class RefundModel(models.Model):
     """This represents the action of a payment from the community user to another user."""
     amount = IntegerField()
     reason = CharField(max_length=255, blank=True, default="")
     active = BooleanField(default=True)
     creator = ForeignKey(UserModel, on_delete=models.DO_NOTHING)
     transaction = ForeignKey(TransactionModel, on_delete=models.DO_NOTHING, null=True)
-    poll = ForeignKey(PollModel, on_delete=models.DO_NOTHING)
+    votes = ManyToManyField(VoteModel, blank=True)
+
+    created = DateTimeField(auto_now_add=True)
+    modified = DateTimeField(auto_now=True)
+
+
+class MembershipPollModel(models.Model):
+    """This class represents a poll. Polls are used to accept the membership requests of users"""
+    votes = ManyToManyField(VoteModel, blank=True)
+    creator = ForeignKey(UserModel, on_delete=models.CASCADE)
+    active = BooleanField(default=False)
 
     created = DateTimeField(auto_now_add=True)
     modified = DateTimeField(auto_now=True)
