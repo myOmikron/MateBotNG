@@ -45,11 +45,15 @@ class AuthView(View):
         ret = self._check_auth(request)
         if isinstance(ret, JsonResponse):
             return ret
-        return self.secure_post(request, *args, **kwargs)
+        try:
+            decoded = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"success": False, "info": "JSON could not be decoded"}, status=400)
+        return self.secure_post(request, decoded, *args, **kwargs)
 
     def secure_get(self, request, *args, **kwargs):
         return JsonResponse({"success": False, "info": "Method not allowed"}, status=405)
 
-    def secure_post(self, request, *args, **kwargs):
+    def secure_post(self, request, decoded, *args, **kwargs):
         return JsonResponse({"success": False, "info": "Method not allowed"}, status=405)
 
