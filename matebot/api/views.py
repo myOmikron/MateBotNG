@@ -62,3 +62,9 @@ class AuthView(View):
     def secure_post(self, request, decoded, *args, **kwargs):
         return JsonResponse({"success": False, "info": "Method not allowed"}, status=405)
 
+
+class GetConsumableView(AuthView):
+    def secure_get(self, request, *args, **kwargs):
+        data = [x.to_dict() for x in models.ConsumableModel.objects.all()]
+        return JsonResponse({"success": True, "data": data})
+
