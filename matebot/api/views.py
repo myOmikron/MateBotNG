@@ -200,3 +200,20 @@ class StartVouchView(AuthView):
         target.save()
         # TODO Send callback to target
         return JsonResponse({"success": True})
+
+
+class EndVouchView(AuthView):
+    def secure_post(self, request, decoded, *args, **kwargs):
+        required = ["user_id", "target_id"]
+        if not all([x in decoded for x in required]):
+            return JsonResponse({"success": False, "info": "Missing mandatory parameter"}, status=400)
+        try:
+            user = models.UserModel.objects.get(id=decoded["user_id"], active=True)
+            target = models.UserModel.objects.get(id=decoded["target_id"], active=True)
+        except models.UserModel.DoesNotExist:
+            return JsonResponse({"success": False, "info": "User or target does not exist"}, status=400)
+        if not target.voucher == user:
+            return JsonResponse({"success": False, "info": "User is not vouching for target"}, status=409)
+        target.voucher = None
+        target.save()
+        return JsonResponse({"success": True})
