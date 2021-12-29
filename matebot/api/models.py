@@ -24,9 +24,6 @@ class UserModel(models.Model):
     created = DateTimeField(auto_now_add=True)
     modified = DateTimeField(auto_now=True)
 
-    def __str__(self):
-        return self.name
-
     def to_dict(self):
         return {
             "identifier": self.id,
