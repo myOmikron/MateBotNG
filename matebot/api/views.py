@@ -80,3 +80,25 @@ class GetUserView(AuthView):
             data = [x.to_dict() for x in models.UserModel.objects.all()]
         return JsonResponse({"success": True, "data": data})
 
+
+class CreateUserView(AuthView):
+
+    def secure_post(self, request: WSGIRequest, decoded: dict, *args, **kwargs):
+        required = ["application_id", "user_alias"]
+        if not all([x in decoded for x in required]):
+            return JsonResponse({"success": False, "info": "Missing mandatory parameter"}, status=400)
+        try:
+            name = decoded["name"] if "name" in decoded else ""
+        except ValueError:
+            return JsonResponse({"success": False, "info": "Bad parameter type"}, status=400)
+        try:
+            application = models.ApplicationModel.objects.get(id=decoded["application_id"])
+        except models.ApplicationModel.DoesNotExist:
+            return JsonResponse({"success": False, "info": "Application with that ID does not exist"}, status=400)
+        user = models.UserModel.objects.create(name=name)
+        models.UserAliasModel.objects.create(
+            user_alias=decoded["user_alias"],
+            application=application,
+            user=user
+        )
+        return JsonResponse({"success": True, "data": user.id})
