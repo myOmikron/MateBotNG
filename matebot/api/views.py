@@ -125,4 +125,8 @@ class PerformTransactionView(AuthView):
         transaction = models.TransactionModel.objects.create(
             sender=sender, receiver=receiver, amount=amount, reason=reason
         )
+        sender.balance -= amount
+        receiver.balance += amount
+        sender.save()
+        receiver.save()
         return JsonResponse({"success": True, "data": transaction.id})
