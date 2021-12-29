@@ -241,3 +241,18 @@ class StartRefundView(AuthView):
         )
         # TODO Send callback to all applications
         return JsonResponse({"success": True, "data": refund.id})
+
+
+class CancelRefundView(AuthView):
+    def secure_post(self, request, decoded, *args, **kwargs):
+        required = ["refund_id"]
+        if not all([x in decoded for x in required]):
+            return JsonResponse({"success": False, "info": "Missing mandatory parameter"}, status=400)
+        try:
+            refund = models.RefundModel.objects.get(id=decoded["refund_id"], active=True)
+        except models.RefundModel.DoesNotExist:
+            return JsonResponse({"success": False, "info": "There is no running refund with that id"}, status=404)
+        refund.active = False
+        refund.save()
+        # TODO Send callback
+        return JsonResponse({"success": True})

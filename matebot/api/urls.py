@@ -18,4 +18,5 @@ urlpatterns = [
     path("endVouch", EndVouchView.as_view()),
 
     path("startRefund", StartRefundView.as_view()),
+    path("cancelRefund", CancelRefundView.as_view()),
 ]
