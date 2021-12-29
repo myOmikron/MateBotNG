@@ -36,7 +36,7 @@ class UserModel(models.Model):
             "internal": self.internal,
             "voucher_id": self.voucher_id,
             "vouched_for": [x.id for x in self.usermodel_set.all()],
-            "user_alias_ids": dict((x.application_id, x.app_user_id) for x in self.useraliasmodel_set.all()),
+            "user_alias_ids": dict((x.application_id, x.user_alias) for x in self.useraliasmodel_set.all()),
             "created": self.created.timestamp(),
             "modified": self.modified.timestamp()
         }
