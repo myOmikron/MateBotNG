@@ -102,3 +102,27 @@ class CreateUserView(AuthView):
             user=user
         )
         return JsonResponse({"success": True, "data": user.id})
+
+
+class PerformTransactionView(AuthView):
+
+    def secure_post(self, request, decoded, *args, **kwargs):
+        required = ["sender_id", "receiver_id", "amount", "reason"]
+        if not all([x in decoded for x in required]):
+            return JsonResponse({"success": False, "info": "Missing mandatory parameter"}, status=400)
+        try:
+            sender = models.UserModel.objects.get(id=decoded["sender_id"])
+            receiver = models.UserModel.objects.get(id=decoded["receiver_id"])
+        except models.UserModel.DoesNotExist:
+            return JsonResponse({"success": False, "info": "Sender or Received not found"}, status=400)
+        try:
+            amount = int(decoded["amount"])
+            if amount <= 0:
+                raise ValueError
+        except ValueError:
+            return JsonResponse({"success": False, "info": "Amount was no positive integer"}, status=400)
+        reason = decoded["reason"]
+        transaction = models.TransactionModel.objects.create(
+            sender=sender, receiver=receiver, amount=amount, reason=reason
+        )
+        return JsonResponse({"success": True, "data": transaction.id})
