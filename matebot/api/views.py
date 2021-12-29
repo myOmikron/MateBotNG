@@ -154,3 +154,28 @@ class GetHistoryView(AuthView):
             amount = 10
         transactions = models.TransactionModel.objects.filter(receiver=target).order_by("-created")[:amount]
         return JsonResponse({"success": True, "data": [x.to_dict() for x in transactions]})
+
+
+class DeleteUserAliasView(AuthView):
+    def secure_post(self, request, decoded, *args, **kwargs):
+        required = ["user_id", "application_id"]
+        if not all([x in decoded for x in required]):
+            return JsonResponse({"success": False, "info": "Missing mandatory parameter"}, status=400)
+        matches = models.UserAliasModel.objects.filter(
+            user_id=decoded["user_id"],
+            application_id=decoded["application_id"]
+        )
+        if not any(matches.all()):
+            return JsonResponse(
+                {"success": False, "info": "There are no user aliases matching your parameters"},
+                status=400
+            )
+        if len(models.UserModel.objects.get(id=decoded["user_id"]).to_dict()["user_alias_ids"]) == 1:
+            return JsonResponse(
+                {"success": False, "info": "You cannot remove a user alias if there is only 1"},
+                status=409
+            )
+        for match in matches:
+            match.delete()
+        return JsonResponse({"success": True, "data": True})
+
