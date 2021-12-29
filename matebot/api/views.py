@@ -130,3 +130,27 @@ class PerformTransactionView(AuthView):
         sender.save()
         receiver.save()
         return JsonResponse({"success": True, "data": transaction.id})
+
+
+class GetHistoryView(AuthView):
+
+    def secure_get(self, request, *args, **kwargs):
+        required = ["target_id"]
+        if not all([x in request.GET for x in required]):
+            return JsonResponse({"success": False, "info": "Missing mandatory parameter"}, status=400)
+        target_id = request.GET["target_id"]
+        try:
+            target = models.UserModel.objects.get(id=target_id)
+        except models.UserModel.DoesNotExist:
+            return JsonResponse({"success": False, "info": "Target user is invalid"}, status=400)
+        if "amount" in request.GET:
+            try:
+                amount = int(request.GET["amount"])
+                if amount <= 0:
+                    raise ValueError
+            except ValueError:
+                return JsonResponse({"success": False, "info": "Amount is no valid positive integer"}, status=400)
+        else:
+            amount = 10
+        transactions = models.TransactionModel.objects.filter(receiver=target).order_by("-created")[:amount]
+        return JsonResponse({"success": True, "data": [x.to_dict() for x in transactions]})

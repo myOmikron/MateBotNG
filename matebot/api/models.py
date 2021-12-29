@@ -73,6 +73,15 @@ class TransactionModel(models.Model):
     reason = CharField(max_length=255, default="", blank=True)
     created = DateTimeField(auto_now_add=True)
 
+    def to_dict(self):
+        return {
+            "sender_id": self.sender_id,
+            "receiver_id": self.receiver_id,
+            "amount": self.amount,
+            "reason": self.reason,
+            "created": self.created.timestamp()
+        }
+
 
 class ConsumableMessageModel(models.Model):
     """This represents a message that is sent when a consumable is consumed."""
