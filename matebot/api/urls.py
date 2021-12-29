@@ -16,4 +16,6 @@ urlpatterns = [
 
     path("startVouch", StartVouchView.as_view()),
     path("endVouch", EndVouchView.as_view()),
+
+    path("startRefund", StartRefundView.as_view()),
 ]

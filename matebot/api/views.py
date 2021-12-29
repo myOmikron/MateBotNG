@@ -217,3 +217,27 @@ class EndVouchView(AuthView):
         target.voucher = None
         target.save()
         return JsonResponse({"success": True})
+
+
+class StartRefundView(AuthView):
+    def secure_post(self, request, decoded, *args, **kwargs):
+        required = ["user_id", "amount"]
+        if not all([x in decoded for x in required]):
+            return JsonResponse({"success": False, "info": "Missing mandatory parameter"}, status=400)
+        try:
+            user = models.UserModel.objects.get(id=decoded["user_id"], active=True, internal=True)
+        except models.UserModel.DoesNotExist:
+            return JsonResponse({"success": False, "info": "There is no internal user with that id"}, status=409)
+        if models.RefundModel.objects.filter(creator=user, active=True).exists():
+            return JsonResponse({"success": False, "info": "There's already a refund running"})
+        try:
+            amount = int(decoded["amount"])
+        except ValueError:
+            return JsonResponse({"success": False, "info": "Amount is no positive integer"}, status=400)
+        refund = models.RefundModel.objects.create(
+            amount=amount,
+            creator=user,
+            reason=decoded["reason"] if "reason" in decoded else ""
+        )
+        # TODO Send callback to all applications
+        return JsonResponse({"success": True, "data": refund.id})
