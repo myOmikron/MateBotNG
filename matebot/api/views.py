@@ -179,3 +179,24 @@ class DeleteUserAliasView(AuthView):
             match.delete()
         return JsonResponse({"success": True, "data": True})
 
+
+class StartVouchView(AuthView):
+    def secure_post(self, request, decoded, *args, **kwargs):
+        required = ["user_id", "target_id"]
+        if not all([x in decoded for x in required]):
+            return JsonResponse({"success": False, "info": "Missing mandatory parameter"}, status=400)
+        try:
+            user = models.UserModel.objects.get(id=decoded["user_id"], active=True)
+            target = models.UserModel.objects.get(id=decoded["target_id"], active=True)
+        except models.UserModel.DoesNotExist:
+            return JsonResponse({"success": False, "info": "User or target does not exist"}, status=400)
+        if not user.internal:
+            return JsonResponse({"success": False, "info": "User is not allowed to vouch for someone"}, status=409)
+        if target.internal:
+            return JsonResponse({"success": False, "info": "Target is already an internal"}, status=409)
+        if target.voucher:
+            return JsonResponse({"success": False, "info": "Target is already vouched for"}, status=409)
+        target.voucher = user
+        target.save()
+        # TODO Send callback to target
+        return JsonResponse({"success": True})

@@ -12,4 +12,6 @@ urlpatterns = [
     path("createUser", CreateUserView.as_view()),
     path("getHistory", GetHistoryView.as_view()),
     path("deleteUserAlias", DeleteUserAliasView.as_view()),
+
+    path("startVouch", StartVouchView.as_view()),
 ]
