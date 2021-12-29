@@ -14,7 +14,7 @@ from api import models
 class AuthView(View):
     """This is the base class to ensure requests are only allowed when authenticated"""
 
-    def _check_auth(self, request):
+    def _check_auth(self, request, data=None):
         if "Authorization" not in request.headers:
             return JsonResponse({"success": False, "info": "Authentication failed"}, status=401)
         if " " not in request.headers["Authorization"]:
@@ -33,7 +33,7 @@ class AuthView(View):
                 return JsonResponse({"success": False, "info": "Authorization failed"}, status=403)
         elif request.META["REQUEST_METHOD"] == "POST":
             if not any([
-                rc_protocol.validate_checksum(request.POST, checksum, x.token, salt=request.path)
+                rc_protocol.validate_checksum(data, checksum, x.token, salt=request.path)
                 for x in models.ApplicationModel.objects.all()
             ]):
                 return JsonResponse({"success": False, "info": "Authorization failed"}, status=403)
@@ -47,13 +47,13 @@ class AuthView(View):
         return self.secure_get(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
-        ret = self._check_auth(request)
-        if isinstance(ret, JsonResponse):
-            return ret
         try:
             decoded = json.loads(request.body)
         except json.JSONDecodeError:
             return JsonResponse({"success": False, "info": "JSON could not be decoded"}, status=400)
+        ret = self._check_auth(request, data=decoded)
+        if isinstance(ret, JsonResponse):
+            return ret
         return self.secure_post(request, decoded, *args, **kwargs)
 
     def secure_get(self, request, *args, **kwargs):
