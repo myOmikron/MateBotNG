@@ -144,6 +144,12 @@ class CommunismUserModel(models.Model):
     user = ForeignKey(UserModel, on_delete=models.DO_NOTHING)
     quantity = IntegerField(default=1)
 
+    def to_dict(self):
+        return {
+            "user_id": self.user_id,
+            "quantity": self.quantity
+        }
+
 
 class CommunismModel(models.Model):
     """Model for communisms.
@@ -170,7 +176,7 @@ class CommunismModel(models.Model):
             "amount": self.amount,
             "reason": self.reason,
             "creator_id": self.creator_id,
-            "participant_ids": [x.id for x in self.participants.all()],
+            "participants": [x.to_dict() for x in self.participants.all()],
             "created": self.created.timestamp(),
             "modified": self.modified.timestamp()
         }
