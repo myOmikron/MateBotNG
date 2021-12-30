@@ -2,6 +2,7 @@ import json
 import signal
 
 from django.core.handlers.wsgi import WSGIRequest
+from django.db.models import F
 from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views import View
@@ -478,3 +479,28 @@ class GetCommunismView(AuthView):
         else:
             communisms = models.CommunismModel.objects.filter(active=True)
             return JsonResponse({"success": True, "data": [x.to_dict() for x in communisms.all()]})
+
+
+class JoinCommunismView(AuthView):
+    def secure_post(self, request, decoded, *args, **kwargs):
+        required = ["user_id", "communism_id"]
+        if not all([x in decoded for x in required]):
+            return JsonResponse({"success": False, "info": "Missing mandatory parameter"}, status=400)
+        try:
+            user = models.UserModel.objects.get(id=decoded["user_id"], active=True)
+        except models.UserModel.DoesNotExist:
+            return JsonResponse({"success": False, "info": "There is no user with that id"}, status=404)
+        try:
+            communism = models.CommunismModel.objects.get(id=decoded["communism_id"], active=True)
+        except models.CommunismModel.DoesNotExist:
+            return JsonResponse({"success": False, "info": "There is no communism running with that id"}, status=404)
+        if not user.internal and user.voucher is None:
+            return JsonResponse({"success": False, "info": "You are not allowed to join this communism!"}, status=400)
+        if communism.participants.filter(user=user).exists():
+            communism.participants.filter(user=user).update(quantity=F("quantity")+1)
+        else:
+            communism_user = models.CommunismUserModel.objects.create(user=user, quantity=1)
+            communism.participants.add(communism_user)
+            communism.save()
+        # TODO: Invoke callback: CommunismUpdate
+        return JsonResponse({"success": True})
