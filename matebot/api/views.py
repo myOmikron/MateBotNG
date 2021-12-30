@@ -373,3 +373,30 @@ class VoteMembershipView(AuthView):
             membership_poll.save()
             # TODO: Invoke callback: MembershipRequestDeclined
         return JsonResponse({"success": True})
+
+
+class StartCommunismView(AuthView):
+    def secure_post(self, request, decoded, *args, **kwargs):
+        required = ["user_id", "amount", "reason"]
+        if not all([x in decoded for x in required]):
+            return JsonResponse({"success": False, "info": "Missing mandatory parameter"}, status=400)
+        try:
+            user = models.UserModel.objects.get(id=decoded["user_id"], active=True)
+        except models.UserModel.DoesNotExist:
+            return JsonResponse({"success": False, "info": "There is no user with that id"}, status=400)
+        if not user.internal and user.voucher is None:
+            return JsonResponse({"success": False, "info": "The user is not allowed to use this feature"}, status=400)
+        try:
+            amount = int(decoded["amount"])
+            if amount <= 0:
+                raise ValueError
+            reason = decoded["reason"]
+        except ValueError:
+            return JsonResponse({"success": False, "info": "Amount or reason has an invalid type"}, status=400)
+        if models.CommunismModel.objects.filter(active=True, creator=user).exists():
+            return JsonResponse(
+                {"success": False, "info": "There is already a communism active for this user"},
+                status=409
+            )
+        communism = models.CommunismModel.objects.create(creator=user, reason=reason, amount=amount)
+        return JsonResponse({"success": True, "data": communism.id})
