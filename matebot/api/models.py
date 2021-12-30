@@ -165,10 +165,11 @@ class CommunismModel(models.Model):
 
     def to_dict(self):
         return {
+            "identifier": self.id,
             "active": self.active,
             "amount": self.amount,
             "reason": self.reason,
-            "creator": self.creator_id,
+            "creator_id": self.creator_id,
             "participant_ids": [x.id for x in self.participants.all()],
             "created": self.created.timestamp(),
             "modified": self.modified.timestamp()
