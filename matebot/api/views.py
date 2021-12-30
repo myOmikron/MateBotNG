@@ -504,3 +504,27 @@ class JoinCommunismView(AuthView):
             communism.save()
         # TODO: Invoke callback: CommunismUpdate
         return JsonResponse({"success": True})
+
+
+class LeaveCommunismView(AuthView):
+    def secure_post(self, request, decoded, *args, **kwargs):
+        required = ["user_id", "communism_id"]
+        if not all([x in decoded for x in required]):
+            return JsonResponse({"success": False, "info": "Missing mandatory parameter"}, status=400)
+        try:
+            user = models.UserModel.objects.get(id=decoded["user_id"], active=True)
+        except models.UserModel.DoesNotExist:
+            return JsonResponse({"success": False, "info": "There is no user with that id"}, status=404)
+        try:
+            communism = models.CommunismModel.objects.get(id=decoded["communism_id"], active=True)
+        except models.CommunismModel.DoesNotExist:
+            return JsonResponse({"success": False, "info": "There is no running communism with that id"}, status=404)
+        if communism.participants.filter(user=user).exists():
+            if communism.participants.get(user=user).quantity == 1:
+                communism_user = communism.participants.get(user=user)
+                communism.participants.remove(communism_user)
+                communism.delete()
+            else:
+                communism.participants.filter(user=user).update(quantity=F("quantity")-1)
+            # TODO: Invoke callback: UpdateCommunism
+        return JsonResponse({"success": True})

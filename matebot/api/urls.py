@@ -24,6 +24,7 @@ urlpatterns = [
     path("cancelCommunism", CancelCommunismView.as_view()),
     path("getCommunisms", GetCommunismView.as_view()),
     path("joinCommunism", JoinCommunismView.as_view()),
+    path("leaveCommunism", LeaveCommunismView.as_view()),
 
     path("startRefund", StartRefundView.as_view()),
     path("cancelRefund", CancelRefundView.as_view()),
