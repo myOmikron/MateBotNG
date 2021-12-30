@@ -15,7 +15,7 @@ class UserModel(models.Model):
 
     It is not bound to any application and can be accessed by all applications.
     """
-    name = CharField(max_length=255, null=True)
+    name = CharField(max_length=255, null=True, blank=True)
     balance = IntegerField(default=0)
     active = BooleanField(default=True)
     internal = BooleanField(default=False)
@@ -161,5 +161,16 @@ class CommunismModel(models.Model):
     participants = ManyToManyField(CommunismUserModel, blank=True)
 
     created = DateTimeField(auto_now_add=True)
-    accessed = DateTimeField(auto_now=True)
+    modified = DateTimeField(auto_now=True)
+
+    def to_dict(self):
+        return {
+            "active": self.active,
+            "amount": self.amount,
+            "reason": self.reason,
+            "creator": self.creator_id,
+            "participant_ids": [x.id for x in self.participants.all()],
+            "created": self.created.timestamp(),
+            "modified": self.modified.timestamp()
+        }
 
