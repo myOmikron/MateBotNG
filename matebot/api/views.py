@@ -1,4 +1,5 @@
 import json
+import signal
 
 from django.core.handlers.wsgi import WSGIRequest
 from django.http import JsonResponse
@@ -464,3 +465,16 @@ class CancelCommunismView(AuthView):
         communism.save()
         # TODO: Create callback: send CommunismCanceled
         return JsonResponse({"success": True})
+
+
+class GetCommunismView(AuthView):
+    def secure_get(self, request, *args, **kwargs):
+        if "filter" in request.GET:
+            try:
+                communism = models.CommunismModel.objects.get(id=request.GET["filter"])
+            except models.CommunismModel.DoesNotExist:
+                return JsonResponse({"success": False, "info": "There is no such communism"}, status=404)
+            return JsonResponse({"success": True, "data": communism.to_dict()})
+        else:
+            communisms = models.CommunismModel.objects.filter(active=True)
+            return JsonResponse({"success": True, "data": [x.to_dict() for x in communisms.all()]})
