@@ -300,3 +300,22 @@ class VoteRefundView(AuthView):
             # TODO Callback: refundDeclined
         refund.save()
         return JsonResponse({"success": True})
+
+
+class RetractRefundVoteView(AuthView):
+    def secure_post(self, request, decoded, *args, **kwargs):
+        required = ["user_id", "refund_id"]
+        if not all([x in decoded for x in required]):
+            return JsonResponse({"success": False, "info": "Missing mandatory parameter"}, status=400)
+        try:
+            user = models.UserModel.objects.get(id=decoded["user_id"], active=True, internal=True)
+        except models.UserModel.DoesNotExist:
+            return JsonResponse({"success": False, "info": "There is no internal user with that id"}, status=400)
+        try:
+            refund = models.RefundModel.objects.get(id=decoded["refund_id"], active=True)
+        except models.RefundModel.DoesNotExist:
+            return JsonResponse({"success": False, "info": "There is no active refund with that id"}, status=400)
+        if refund.votes.filter(user=user).exists():
+            votes = refund.votes.filter(user=user)
+            votes.delete()
+        return JsonResponse({"success": True})
