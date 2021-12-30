@@ -319,3 +319,19 @@ class RetractRefundVoteView(AuthView):
             votes = refund.votes.filter(user=user)
             votes.delete()
         return JsonResponse({"success": True})
+
+
+class RequestMembershipView(AuthView):
+    def secure_post(self, request, decoded, *args, **kwargs):
+        required = ["user_id"]
+        if not all([x in decoded for x in required]):
+            return JsonResponse({"success": False, "info": "Missing mandatory parameter"}, status=400)
+        try:
+            user = models.UserModel.objects.get(id=decoded["user_id"], active=True, internal=False)
+        except models.UserModel.DoesNotExist:
+            return JsonResponse({"success": False, "info": "There's no external user with that id"}, status=400)
+        if models.MembershipPollModel.objects.filter(active=True, creator=user).exists():
+            return JsonResponse({"success": False, "info": "You have already a membership poll running"}, status=409)
+        membership_poll = models.MembershipPollModel.objects.create(creator=user, active=True)
+        # TODO Send Callback: CreatedMembershipPoll
+        return JsonResponse({"success": True, "data": membership_poll.id})
