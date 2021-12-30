@@ -8,6 +8,7 @@ import rc_protocol
 from django.views.decorators.csrf import csrf_exempt
 
 from api import models
+from matebot import settings
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -255,4 +256,47 @@ class CancelRefundView(AuthView):
         refund.active = False
         refund.save()
         # TODO Send callback
+        return JsonResponse({"success": True})
+
+
+class VoteRefundView(AuthView):
+    def secure_post(self, request, decoded, *args, **kwargs):
+        required = ["user_id", "refund_id", "positive"]
+        if not all([x in decoded for x in required]):
+            return JsonResponse({"success": False, "info": "Missing mandatory parameter"}, status=400)
+        try:
+            user = models.UserModel.objects.get(id=decoded["user_id"], active=True, internal=True)
+        except models.UserModel.DoesNotExist:
+            return JsonResponse({"success": False, "info": "There is no internal user with this id"}, status=404)
+        try:
+            refund = models.RefundModel.objects.get(id=decoded["refund_id"], active=True)
+        except models.RefundModel.DoesNotExist:
+            return JsonResponse({"success": False, "info": "There is no active refund with that id"}, status=404)
+        if refund.creator == user:
+            return JsonResponse({"success": False, "info": "The creator is not allowed to vote"}, status=400)
+        try:
+            positive = bool(decoded["positive"])
+        except ValueError:
+            return JsonResponse({"success": False, "info": "Positive is no valid bool"}, status=400)
+        vote = models.VoteModel.objects.create(user=user, positive=positive)
+        user_votes = refund.votes.filter(user=user)
+        if user_votes.exists():
+            for x in user_votes:
+                refund.votes.remove(x)
+        refund.votes.add(vote)
+        votes_sum = sum([1 if x.positive else -1 for x in refund.votes.all()])
+        if votes_sum >= settings.REFUND_VOTE_DELTA:
+            refund.active = False
+            transaction = models.TransactionModel.objects.create(
+                sender=models.UserModel.objects.get(id=0),
+                receiver=user,
+                amount=refund.amount,
+                reason=refund.reason
+            )
+            refund.transaction = transaction
+            # TODO Callback: refundAccepted
+        if votes_sum <= -settings.REFUND_VOTE_DELTA:
+            refund.active = False
+            # TODO Callback: refundDeclined
+        refund.save()
         return JsonResponse({"success": True})
