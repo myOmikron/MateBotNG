@@ -400,3 +400,43 @@ class StartCommunismView(AuthView):
             )
         communism = models.CommunismModel.objects.create(creator=user, reason=reason, amount=amount)
         return JsonResponse({"success": True, "data": communism.id})
+
+
+class EndCommunismView(AuthView):
+    def secure_post(self, request, decoded, *args, **kwargs):
+        required = ["user_id", "communism_id"]
+        if not all([x in decoded for x in required]):
+            return JsonResponse({"success": False, "info": "Missing mandatory parameter"}, status=400)
+        try:
+            user = models.UserModel.objects.get(id=decoded["user_id"], active=True)
+        except models.UserModel.DoesNotExist:
+            return JsonResponse({"success": False, "info": "There is no user with that id"}, status=400)
+        try:
+            communism = models.CommunismModel.objects.get(id=decoded["communism_id"], active=True)
+        except models.CommunismModel.DoesNotExist:
+            return JsonResponse({"success": False, "info": "There is no active communism with that id"}, status=400)
+        if communism.creator != user:
+            return JsonResponse(
+                {"success": False, "info": "Only the creator is allowed to end this communism"},
+                status=400
+            )
+        if not communism.participants.exists():
+            return JsonResponse(
+                {"success": False, "info": "In order to end a communism, there have to be participants"},
+                status=400
+            )
+        for participant in communism.participants.all():
+            amount = (communism.amount//len(communism.participants.all())) * participant.quantity
+            models.TransactionModel.objects.create(
+                amount=amount,
+                sender=participant.user,
+                receiver=communism.creator,
+                reason=communism.reason
+            )
+            participant.user.balance -= amount
+            participant.user.save()
+            communism.creator.balance += amount
+            communism.creator.save()
+        communism.save()
+        # TODO: Invoke callback: CommunismFinished
+        return JsonResponse({"success": True})
