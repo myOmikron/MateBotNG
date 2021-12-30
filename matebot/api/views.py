@@ -440,3 +440,27 @@ class EndCommunismView(AuthView):
         communism.save()
         # TODO: Invoke callback: CommunismFinished
         return JsonResponse({"success": True})
+
+
+class CancelCommunismView(AuthView):
+    def secure_post(self, request, decoded, *args, **kwargs):
+        required = ["user_id", "communism_id"]
+        if not all([x in decoded for x in required]):
+            return JsonResponse({"success": False, "info": "Missing mandatory parameter"}, status=400)
+        try:
+            user = models.UserModel.objects.get(id=decoded["user_id"], active=True)
+        except models.UserModel.DoesNotExist:
+            return JsonResponse({"success": False, "info": "There is no user with that id"}, status=400)
+        try:
+            communism = models.CommunismModel.objects.get(id=decoded["communism_id"], active=True)
+        except models.CommunismModel.DoesNotExist:
+            return JsonResponse({"success": False, "info": "There is no active communism with that id"}, status=400)
+        if communism.creator != user:
+            return JsonResponse(
+                {"success": False, "info": "Only the creator is allowed to end this communism"},
+                status=400
+            )
+        communism.active = False
+        communism.save()
+        # TODO: Create callback: send CommunismCanceled
+        return JsonResponse({"success": True})
