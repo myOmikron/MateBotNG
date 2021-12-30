@@ -14,6 +14,7 @@ urlpatterns = [
     path("deleteUserAlias", DeleteUserAliasView.as_view()),
 
     path("requestMembership", RequestMembershipView.as_view()),
+    path("voteMembership", VoteMembershipView.as_view()),
 
     path("startVouch", StartVouchView.as_view()),
     path("endVouch", EndVouchView.as_view()),

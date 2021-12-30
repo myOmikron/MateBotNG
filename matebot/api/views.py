@@ -335,3 +335,41 @@ class RequestMembershipView(AuthView):
         membership_poll = models.MembershipPollModel.objects.create(creator=user, active=True)
         # TODO Send Callback: CreatedMembershipPoll
         return JsonResponse({"success": True, "data": membership_poll.id})
+
+
+class VoteMembershipView(AuthView):
+    def secure_post(self, request, decoded, *args, **kwargs):
+        required = ["user_id", "membership_poll_id", "positive"]
+        if not all([x in decoded for x in required]):
+            return JsonResponse({"success": False, "info": "Missing mandatory parameter"}, status=400)
+        try:
+            user = models.UserModel.objects.get(active=True, internal=True, id=decoded["user_id"])
+        except models.UserModel.DoesNotExist:
+            return JsonResponse({"success": False, "info": "There is no internal user with that id"}, status=400)
+        try:
+            positive = bool(decoded["positive"])
+        except ValueError:
+            return JsonResponse({"success": False, "info": "Positive couldn't be parsed to a bool"}, status=400)
+        try:
+            membership_poll = models.MembershipPollModel.objects.get(id=decoded["membership_poll_id"], active=True)
+        except models.MembershipPollModel.DoesNotExist:
+            return JsonResponse({"success": False, "info": "There is no membership poll with that id"}, status=400)
+        vote = models.VoteModel.objects.create(user=user, positive=positive)
+        user_votes = membership_poll.votes.filter(user=user)
+        if user_votes.exists():
+            for x in user_votes:
+                membership_poll.votes.remove(x)
+                x.delete()
+        membership_poll.votes.add(vote)
+        vote_sum = sum([1 if x.positive else -1 for x in membership_poll.votes.all()])
+        if vote_sum >= settings.USER_PROMOTE_DELTA:
+            membership_poll.active = False
+            membership_poll.creator.voucher = None
+            membership_poll.creator.internal = True
+            membership_poll.creator.save()
+            # TODO: Invoke callback: MembershipRequestAccepted
+        elif vote_sum <= -settings.USER_PROMOTE_DELTA:
+            membership_poll.active = False
+            membership_poll.save()
+            # TODO: Invoke callback: MembershipRequestDeclined
+        return JsonResponse({"success": True})
